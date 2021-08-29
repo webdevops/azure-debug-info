@@ -134,14 +134,9 @@ func startAzureReport() {
 	log.Infof("searching for ServicePrincipal information")
 	authSettings, _ := auth.GetSettingsFromEnvironment()
 
-	if authSettings.GetMSI().ClientID != "" {
-		spnInfo := log.Fields{
-			"clientId": authSettings.GetMSI().ClientID,
-		}
-		log.WithFields(spnInfo).Infof("using ServicePrincipal in ENV vars")
-	}
-
+	// spn detection
 	if spnToken, err := authSettings.GetMSI().ServicePrincipalToken(); err == nil {
+		// msi detected
 		if err := spnToken.EnsureFresh(); err != nil {
 			log.Panic(err)
 		}
@@ -169,6 +164,23 @@ func startAzureReport() {
 
 				log.WithFields(spnInfo).Info("found MSI ServicePrincipal in auth token")
 			}
+		}
+	} else {
+		// env settings
+		spnInfo := log.Fields{}
+
+		if val := os.Getenv("AZURE_CLIENT_ID"); val != "" {
+			spnInfo["clientid"] = val
+		}
+
+		if val := os.Getenv("AZURE_TENANT_ID"); val != "" {
+			spnInfo["tenantid"] = val
+		}
+
+		if len(spnInfo) > 0 {
+			log.WithFields(spnInfo).Infof("using ServicePrincipal in ENV vars")
+		} else {
+			log.WithFields(spnInfo).Infof("unable to detect ServicePrincipal")
 		}
 	}
 
