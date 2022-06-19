@@ -1,25 +1,38 @@
-FROM golang:1.17 as build
+#############################################
+# Build
+#############################################
+FROM --platform=$BUILDPLATFORM golang:1.18-alpine as build
+
+RUN apk upgrade --no-cache --force
+RUN apk add --update build-base make git
 
 WORKDIR /go/src/github.com/webdevops/azure-debug-info
 
-# Get deps (cached)
-COPY ./go.mod /go/src/github.com/webdevops/azure-debug-info
-COPY ./go.sum /go/src/github.com/webdevops/azure-debug-info
-COPY ./Makefile /go/src/github.com/webdevops/azure-debug-info
-RUN make dependencies
+# Dependencies
+COPY go.mod go.sum .
+RUN go mod download
 
 # Compile
-COPY ./ /go/src/github.com/webdevops/azure-debug-info
+COPY . .
 RUN make test
-RUN make lint
-RUN make build
-RUN ./azure-debug-info --help
+ARG TARGETOS TARGETARCH
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build
 
 #############################################
-# FINAL IMAGE
+# Test
+#############################################
+FROM gcr.io/distroless/static as test
+USER 0:0
+WORKDIR /app
+COPY --from=build /go/src/github.com/webdevops/azure-debug-info/azure-debug-info .
+RUN ["./azure-debug-info", "--help"]
+
+#############################################
+# Final
 #############################################
 FROM gcr.io/distroless/static
 ENV LOG_JSON=1
-COPY --from=build /go/src/github.com/webdevops/azure-debug-info/azure-debug-info /
+WORKDIR /
+COPY --from=test /app .
 USER 1000:1000
 ENTRYPOINT ["/azure-debug-info"]
