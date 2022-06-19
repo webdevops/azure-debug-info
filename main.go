@@ -3,6 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"path"
+	"runtime"
+	"strings"
+	"syscall"
+
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
 	"github.com/Azure/go-autorest/autorest"
@@ -12,13 +19,8 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/webdevops/azure-debug-info/config"
-	"os"
-	"os/signal"
-	"path"
-	"runtime"
-	"strings"
-	"syscall"
 )
 
 const (
